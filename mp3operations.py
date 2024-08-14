@@ -279,8 +279,6 @@ def update_file_metadata(mp3list, data_df):
             continue
         # try to find info in metatags
         try:
-            #if file == '/home/jose/music_org/temp/organized//Megan_Thee_Stallion_Body_Official_Video_7PBYGu4Az8s.mp3':
-            #    pdb.set_trace()
             if not data_df.loc[data_df['path'] == file].empty:
                 row = data_df.loc[data_df['path'] == file]
                 if row['data_curated'].values[0] == True:
@@ -295,6 +293,42 @@ def update_file_metadata(mp3list, data_df):
         except Exception as e: 
             print(e)
             continue 
+
+
+def find_comment(artist, comments_df):
+    comments = comments_df.loc[comments_df['artist'] == artist]['comments']
+
+    if comments.empty:
+        return ''
+    else:
+        return comments.values[0]
+
+def update_file_comments(mp3list, data_df, comments_df):
+    for file in mp3list:
+        print(f'processing: {file}\n')
+        if file.strip() == '':
+            continue
+        # try to find info in metatags
+        try:
+            if not data_df.loc[data_df['path'] == file].empty:
+                row = data_df.loc[data_df['path'] == file]
+                comment_result = find_comment(row['artist'].values[0], comments_df)
+                if row['data_curated'].values[0] == True:
+                    audio = eyed3.load(file)
+                    if not audio.tag:
+                        audio.initTag()
+                    audio.tag.album = row['album'].values[0]
+                    audio.tag.artist = row['artist'].values[0]
+                    audio.tag.album_artist = row['artist'].values[0]
+                    audio.tag.title = row['title'].values[0]
+                    if comment_result=='':
+                        audio.tag.comments.set(row['artist'].values[0])
+                    else:
+                        audio.tag.comments.set(comment_result)
+                    audio.tag.save()
+        except Exception as e:
+            print(e)
+            continue
 
 
 def read_metadata(mp3list):
@@ -414,6 +448,15 @@ def meta_move_files(filename, dest_path):
     remove_empty_directories(main_folder)
     #pdb.set_trace()
 
+def update_comments(source_file, source_directory, source_metadata):
+    #load data in dataframe
+    source_df = load_df(source_file)
+    #read directory
+    mp3_array = imp_list_mp3(source_directory)
+    #for element in directory
+    #if element path in dataframe, update
+    metadata_df = load_df(source_metadata)
+    update_file_comments(mp3_array, source_df, metadata_df)
 
 #############################################
 ##sys.argv[1] == operation, ex: read, consolidate
@@ -491,6 +534,16 @@ elif sys.argv[1] == 'final_stages':
     meta_move_files(output_filename, final_directory)
     print('move_files')
     '''
+elif sys.argv[1] == 'update_comments':
+    ##params
+    #2: source folder
+    #3: source data file path
+    #4: source metadata for comments
+    source_directory = sys.argv[2]
+    source_file = sys.argv[3]
+    source_metadata = sys.argv[4]
+    update_comments(source_file, source_directory, source_metadata)
+
 
 
 
@@ -548,6 +601,11 @@ python3 ~/Development/python/mp3operations.py final_stages ~/music_org/temp/orga
 
 4) writer, complete
 python3 ~/Development/python/mp3operations.py update_metadata ~/music_org/temp/songsyt_0124/ ~/music_org/temp/mp3_metadata.csv
+
+
+4new) writer, update comments
+python3 ~/Development/python/mp3operations.py update_comments ~/music_org/temp/songsyt_0124/ ~/music_org/temp/mp3_metadata.csv ~/music_org/temp/metadatafiles.csv
+
 
 5)organize files
 python3 ~/Development/python/mp3operations.py move_files_v1 ~/music_org/temp/songsyt_0124/ ~/music_org/temp/organized/
