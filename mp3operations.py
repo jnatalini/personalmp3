@@ -297,8 +297,7 @@ def update_file_metadata(mp3list, data_df):
 
 def find_comment(artist, comments_df):
     comments = comments_df.loc[comments_df['artist'] == artist]['comments']
-
-    if comments.empty:
+    if comments.empty or pd.isna(comments).values[0]:
         return ''
     else:
         return comments.values[0]
@@ -321,6 +320,7 @@ def update_file_comments(mp3list, data_df, comments_df):
                     audio.tag.artist = row['artist'].values[0]
                     audio.tag.album_artist = row['artist'].values[0]
                     audio.tag.title = row['title'].values[0]
+                    #pdb.set_trace()
                     if comment_result=='':
                         audio.tag.comments.set(row['artist'].values[0])
                     else:
@@ -345,10 +345,11 @@ def read_metadata(mp3list):
             dict[file] = {}   
             tag_obj = audio.tag  
             for method_name in attbs:
-                dict[file][method_name] = str(getattr(tag_obj,method_name)) 
+                dict[file][method_name] = str(getattr(tag_obj, method_name))
+            dict[file]['comments'] = str(tag_obj.comments[0].text)
         except:
-            dict[file] = {'album': 'None', 'artist': 'None', 'title': f'{file.split(".")[0]}', 'recording_date': 'None'} 
-    return dict  
+                dict[file] = {'album': 'None', 'artist': 'None', 'title': f'{file.split(".")[0]}', 'recording_date': 'None', 'comments': 'None'}
+    return dict
 
 
 def organize_metadata(metadata):
@@ -358,6 +359,7 @@ def organize_metadata(metadata):
         artist = str(fmd['artist'])
         album = str(fmd['album'])
         title = str(fmd['title'])
+        comments = str(fmd['comments'])
         if artist in organized.keys():
             if album in organized[artist].keys():
                 if title in organized[artist][album].keys():
@@ -367,7 +369,7 @@ def organize_metadata(metadata):
             else:
                 organized[artist][album]={title: [fff]}
         else:
-            organized[artist] = {album: { title: [fff]}}    
+            organized[artist] = {album: { title: [fff]}, 'comments': comments}
     return organized
 
 
@@ -386,18 +388,24 @@ def move_filesv2(organized, path):
     try:  
         for art in organized.keys():
             if art != 'None':
-                create_dir(dest_loc + art)
+                if art != organized[art]['comments']:
+                    art_path = organized[art]['comments'] + '/' + art
+                else:
+                    art_path = art
+                create_dir(dest_loc + art_path)
             for alb in organized[art].keys():
+                if alb == 'comments':
+                    continue
                 if alb != 'None' and art != 'None':
-                    create_dir(dest_loc + art + '/' + alb)
+                    create_dir(dest_loc + art_path + '/' + alb)
                 for title in organized[art][alb].keys():
                     for fname in organized[art][alb][title]: 
                         filename = fname.split('/')[-1]
                         if art != 'None':
                             if alb != 'None':
-                                os.rename(fname, dest_loc + art + '/' + alb + '/' + filename)
+                                os.rename(fname, dest_loc + art_path + '/' + alb + '/' + filename)
                             else: # if alb is None
-                                os.rename(fname, dest_loc + art + '/' + filename)
+                                os.rename(fname, dest_loc + art_path + '/' + filename)
                         else:  #if artist is NONE
                             os.rename(fname, dest_loc + filename)
     except:
@@ -438,7 +446,6 @@ def meta_move_files(filename, dest_path):
     for key in dictionary_file.keys(): arr.append(key)
     consolidated_artist = create_artist_dict(arr)
     print(consolidated_artist)
-    #pdb.set_trace()
     # Now create a method that organizes files based on the dictionary produced by create_artist_dict
     move_files(consolidated_artist, dictionary_file, dest_path)
     #pdb.set_trace()
