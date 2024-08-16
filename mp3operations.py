@@ -316,15 +316,15 @@ def update_file_comments(mp3list, data_df, comments_df):
                     audio = eyed3.load(file)
                     if not audio.tag:
                         audio.initTag()
-                    audio.tag.album = row['album'].values[0]
-                    audio.tag.artist = row['artist'].values[0]
-                    audio.tag.album_artist = row['artist'].values[0]
-                    audio.tag.title = row['title'].values[0]
-                    #pdb.set_trace()
+                    
                     if comment_result=='':
                         audio.tag.comments.set(row['artist'].values[0])
                     else:
                         audio.tag.comments.set(comment_result)
+                    audio.tag.album = row['album'].values[0]
+                    audio.tag.artist = row['artist'].values[0]
+                    audio.tag.album_artist = row['artist'].values[0]
+                    audio.tag.title = row['title'].values[0]
                     audio.tag.save()
         except Exception as e:
             print(e)
@@ -569,7 +569,8 @@ how it works:
 
     or 
     'read_commas'
-    python3 mp3operations.py read_commas ~/Music/songsyt0822_1/ ~/Music/
+    python3 mp3operations.py read_commas ~/music_org/organized_final/final ~/music_org/organized_final/new/
+
        reads the metadata from the files and generates a csv file with the following format
        /mp3_metadata.csv"
     output format:
@@ -611,15 +612,15 @@ python3 ~/Development/python/mp3operations.py final_stages ~/music_org/temp/orga
 --------  OR  step by step-------
 
 4) writer, complete
-python3 ~/Development/python/mp3operations.py update_metadata ~/music_org/temp/songsyt_0124/ ~/music_org/temp/mp3_metadata.csv
+python3 ~/Development/python/mp3operations.py update_metadata ~/music_org/temp/songsyt_0124 ~/music_org/temp/mp3_metadata.csv
 
 
 4new) writer, update comments
-python3 ~/Development/python/mp3operations.py update_comments ~/music_org/temp/songsyt_0124/ ~/music_org/temp/mp3_metadata.csv ~/music_org/temp/metadatafiles.csv
+python3 mp3operations.py update_comments ~/music_org/organized_final/final ~/music_org/organized_final/new/mp3_metadata.csv ~/music_org/organized_final/new/metadata.csv
 
 
 5)organize files
-python3 ~/Development/python/mp3operations.py move_files_v1 ~/music_org/temp/songsyt_0124/ ~/music_org/temp/organized/
+python3 mp3operations.py move_files_v1 ~/music_org/organized_final/final/ ~/music_org/organized_final/new
 
 param2: source dir
 param3: dest dir "it will also create music_og, under the dest
