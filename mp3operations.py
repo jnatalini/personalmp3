@@ -328,6 +328,10 @@ def update_file_comments(mp3list, data_df, comments_df):
                     audio.tag.save()
         except Exception as e:
             print(e)
+            try:
+                audio.tag.save()
+            except Exception as e:
+                continue            
             continue
 
 
