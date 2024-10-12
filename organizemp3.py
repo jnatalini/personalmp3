@@ -10,6 +10,7 @@ import csv
 import urllib.parse
 import urllib.request as req
 from difflib import SequenceMatcher
+from openai import OpenAI
 
 
 def list_mp3s():
@@ -191,13 +192,53 @@ def get_api_data_v2(song_name, artist):
         return 'None'
 
 
+def get_info(row):
+    completion = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {
+                "role": "user",
+                "content": f"this is a song name: {row['title']}. This is possibly the artist  of the song: {row['artist']}, but it may not be accurate. Based on this information, find the artist, album and song title. Provide the response in json format, with fields 'Artist', 'Album' and 'Title'. If you cannot find it return None for each field. Only include the json response, without any additional text."
+            }
+        ]
+    )
+    return completion.choices[0].message.content
+
+
+def update_metadata(filenamepath, metadata):
+    try:
+        audio = eyed3.load(filenamepath)
+        audio.tag.album = metadata['Album']
+        audio.tag.artist = metadata['Artist']
+        audio.tag.album_artist = metadata['Artist']
+        audio.tag.title = metadata['Title']
+        audio.tag.save()
+    except Exception as e:
+        print(e)
+
+def refine_metadata(metadata):
+    main_path = os.getcwd()
+    for song in metadata:
+        try:
+            response = get_info(metadata[song])
+            json_response = json.loads(response[8:].replace('\n', ' ').replace('```',''))
+            print(json_response)
+            if json_response['Artist'] != None: 
+                filepath = os.path.join(main_path, song)
+                update_metadata(filepath, json_response)
+        except Exception as e:
+            print(e)
+
 attributes = ['album',
               'artist',
               'title',
               'recording_date']
 
 __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
+client = OpenAI()
 mp3_array = list_mp3s()
+metadata = process_files(mp3_array)
+refine_metadata(metadata)
 metadata = process_files(mp3_array)
 organized = organize_metadata(metadata)
 #print_metadata(organized)
@@ -211,3 +252,4 @@ print(f'{len(organized)} artists processed')
 #TODO: move song inside album 
 #TODO delete song
 #TODO: if None artist, album, song move it to unknown
+#export OPENAI_API_KEY="your_api_key_here"
